@@ -85,6 +85,10 @@ def load_image_into_numpy_array(image):
         (im_height, im_width, 3)).astype(np.uint8)
 
 
+
+curr_servo_val = 90
+post_servo_value(curr_servo_val)
+
 # start providing video
 # you can use live CCTV video URL in place of "test_video.mp4"
 cap = cv2.VideoCapture(4)
@@ -170,10 +174,24 @@ with detection_graph.as_default():
                         horizontal_distance_to_center_x_bbox = im_half_width - center_x
                         print('distance: ', horizontal_distance_to_center_x_bbox)
 
+                        amount_to_rotate_by = 1
+                        if horizontal_distance_to_center_x_bbox > 0:
+                            print('distance positive, object to left')
+                            curr_servo_val += amount_to_rotate_by
+                        else:
+                            print('distance negative, object pospost_servo_value(curr_servo_val)t_servo_value(curr_servo_val)to right')
+                            curr_servo_val -= amount_to_rotate_by
+
+                        if curr_servo_val < 0:
+                            curr_servo_val = 0
+                        elif curr_servo_val > 180:
+                            curr_servo_val = 180
+
                         cv2.line(image_np, (center_x, center_y), 
                                  (im_half_width, center_y), (0, 255, 0), thickness=3)
 
-                        # post_servo_value(random.randint(0, 180))
+
+                        post_servo_value(curr_servo_val)
 
                 # import pdb;pdb.set_trace()
                 #writting to json file for now, this block will contain API/DB code to handle data.
