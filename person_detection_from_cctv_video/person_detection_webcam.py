@@ -14,6 +14,7 @@ import zipfile
 import json
 import argparse
 import time
+import random
 
 #from collections import defaultdict
 #from io import StringIO
@@ -27,6 +28,8 @@ sys.path.insert(0, 'utils')
 import label_map_util
 import people_class_util as class_utils
 import visualization_utils as vis_util
+
+from send_servo_val_requests import post_servo_value
 
 # parser = argparse.ArgumentParser()
 # parser.add_argument('--path', required=True,
@@ -84,7 +87,8 @@ def load_image_into_numpy_array(image):
 
 # start providing video
 # you can use live CCTV video URL in place of "test_video.mp4"
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(4)
+# cap = cv2.VideoCapture(1)
 #get framerate of given video
 frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 print('>>>>>>>>>FRAME RATE>>>>>>>' + str(frame_rate))
@@ -155,19 +159,21 @@ with detection_graph.as_default():
                                         int(round(ymin * im_height)), int(round(ymax * im_height)))
                         
                         cv2.rectangle(image_np, (left, top), (right, bottom), (0, 255, 0), 2)
-                        center_x = int(round((right - left) / 2))
-                        center_y = int(round((bottom - top) / 2))
+                        center_x = int(round((right - left) / 2) + left)
+                        center_y = int(round((bottom - top) / 2) + top)
                         # center_x = int(round((right - left) / 2)) + left
                         # center_y = int(round((bottom - top) / 2)) + bottom
 
-                        # cv2.circle(image_np, (center_x, center_y), 5, (0, 0, 255), 4)
-                        cv2.circle(image_np, (center_x, im_height - center_y), 5, (0, 0, 255), 4)
+                        cv2.circle(image_np, (center_x, center_y), 5, (0, 0, 255), 4)   
+                        # cv2.circle(image_np, (center_x, im_height - center_y), 5, (0, 0, 255), 4)
                         # print('center: ', center_x, center_y)
                         horizontal_distance_to_center_x_bbox = im_half_width - center_x
                         print('distance: ', horizontal_distance_to_center_x_bbox)
 
-                        cv2.line(image_np, (center_x, im_height - center_y), 
-                                 (im_half_width, im_height - center_y), (0, 255, 0), thickness=3)
+                        cv2.line(image_np, (center_x, center_y), 
+                                 (im_half_width, center_y), (0, 255, 0), thickness=3)
+
+                        # post_servo_value(random.randint(0, 180))
 
                 # import pdb;pdb.set_trace()
                 #writting to json file for now, this block will contain API/DB code to handle data.
