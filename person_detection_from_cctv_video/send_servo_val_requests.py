@@ -1,6 +1,12 @@
 import requests
 import json
 
+
+import sys
+
+print(sys.argv)
+
+
 def post_servo_value(servo_value):
     # curl 192.168.178.125:8080/control_servo -H "Content-Type: application/json" -d '{"servo_value": "0"}'
     IP = '192.168.178.125'
@@ -15,4 +21,4 @@ def post_servo_value(servo_value):
     # print(x.text)
 
 if __name__ == '__main__':
-    post_servo_value(0)
+    post_servo_value(sys.argv[1])
