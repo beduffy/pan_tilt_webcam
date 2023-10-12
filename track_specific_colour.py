@@ -1,4 +1,4 @@
-# from: https://toptechboy.com/tracking-an-object-based-on-color-in-opencv/
+import time
 
 import numpy as np
 import cv2
@@ -32,6 +32,11 @@ valHigh = 90
 
 curr_servo_val = 90
 post_servo_value(curr_servo_val)
+# TODO soon
+# servo_control_frame_rate = 10
+
+TIME_MIN_SINCE_LAST_COMMAND = 0.1
+time_since_last_servo_command_sent = time.time()
 
 
 while True:
@@ -67,24 +72,27 @@ while True:
         horizontal_distance_to_center_x_bbox = im_half_width - x_mean
         print('distance: ', horizontal_distance_to_center_x_bbox)
 
-        amount_to_rotate_by = 1
-        if horizontal_distance_to_center_x_bbox > 0:
-            print('distance positive, object to left')
-            curr_servo_val += amount_to_rotate_by
-        else:
-            print('distance negative, object pospost_servo_value(curr_servo_val)t_servo_value(curr_servo_val)to right')
-            curr_servo_val -= amount_to_rotate_by
-
-        if curr_servo_val < 0:
-            curr_servo_val = 0
-        elif curr_servo_val > 180:
-            curr_servo_val = 180
-
         cv2.line(frame, (x_mean, y_mean), 
                     (im_half_width, y_mean), (0, 255, 0), thickness=3)
 
+        if time.time() - time_since_last_servo_command_sent > TIME_MIN_SINCE_LAST_COMMAND:
+            time_since_last_servo_command_sent = time.time()
+            
+            amount_to_rotate_by = 1  # this can be PID'd
+            if horizontal_distance_to_center_x_bbox > 0:
+                print('distance positive, object to left')
+                curr_servo_val += amount_to_rotate_by
+            else:
+                print('distance negative, object pospost_servo_value(curr_servo_val)t_servo_value(curr_servo_val)to right')
+                curr_servo_val -= amount_to_rotate_by
 
-        post_servo_value(curr_servo_val)
+            if curr_servo_val < 0:
+                curr_servo_val = 0
+            elif curr_servo_val > 180:
+                curr_servo_val = 180
+
+
+            post_servo_value(curr_servo_val)
 
     
 
