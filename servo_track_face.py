@@ -30,6 +30,8 @@ def camera():
     # servo_control_frame_rate = 10
 
     TIME_MIN_SINCE_LAST_COMMAND = 0.1
+    TIME_MIN_SINCE_LAST_COMMAND = 1
+    TIME_MIN_SINCE_LAST_COMMAND = 0.3
     time_since_last_servo_command_sent = time.time()
 
     ret, frame = cam.read()
@@ -58,7 +60,7 @@ def camera():
             cv2.circle(frame, chosen_center_pix_pos, 10, (0, 0, 255))
 
             horizontal_distance_to_center_x_bbox = im_half_width - chosen_center_pix_pos[0]
-            print('distance: ', horizontal_distance_to_center_x_bbox)
+            # horizontal_distance_to_center_x_bbox = chosen_center_pix_pos[0] - im_half_width
 
             cv2.line(frame, (chosen_center_pix_pos[0], chosen_center_pix_pos[1]), 
                         (im_half_width, chosen_center_pix_pos[1]), (0, 255, 0), thickness=3)
@@ -66,13 +68,29 @@ def camera():
             if time.time() - time_since_last_servo_command_sent > TIME_MIN_SINCE_LAST_COMMAND:
                 time_since_last_servo_command_sent = time.time()
                 
-                amount_to_rotate_by = 1  # this can be PID'd TODO
-                if horizontal_distance_to_center_x_bbox > 0:
-                    print('distance positive, object to left')
-                    curr_servo_val += amount_to_rotate_by
-                else:
-                    print('distance negative, object pospost_servo_value(curr_servo_val)t_servo_value(curr_servo_val)to right')
-                    curr_servo_val -= amount_to_rotate_by
+                # amount_to_rotate_by = 0.1  # this can be PID'd TODO
+                # if horizontal_distance_to_center_x_bbox > 0:
+                #     print('distance positive, object to left')
+                #     curr_servo_val += amount_to_rotate_by
+                # else:
+                #     print('distance negative, object pospost_servo_value(curr_servo_val)t_servo_value(curr_servo_val)to right')
+                #     curr_servo_val -= amount_to_rotate_by
+
+                # this PID converts from horizontal pixel distances to degree rotates to add to servo val
+                # Therefore the max is 640 pixels -> 180 degrees
+                # 640 / 180 = 3.5 P
+                # So if 100 pixels away: 3.5 x 100
+                # or 180 / 640 = 0.28125
+                # So if 100 pixels away: 0.28125 x 100 = 28.125 degrees to change... 
+                # TODO could also calculate how many degrees theoretically with a target 3 metres away? hmm, manual tuning
+                # if 10 pixels away: 0.281125 x 10 = 2.8 degrees...
+
+                # P_const = 0.28125
+                P_const = 0.15
+                amount_to_rotate_by = horizontal_distance_to_center_x_bbox * P_const
+                curr_servo_val += amount_to_rotate_by
+                print('horizontal distance: ', horizontal_distance_to_center_x_bbox)
+                print('amount_to_rotate_by:', amount_to_rotate_by)
 
                 if curr_servo_val < 0:
                     curr_servo_val = 0
