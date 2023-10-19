@@ -30,10 +30,12 @@ def camera():
     # servo_control_frame_rate = 10
 
     TIME_MIN_SINCE_LAST_COMMAND = 0.1
+    # TIME_MIN_SINCE_LAST_COMMAND = 0.05
     # TIME_MIN_SINCE_LAST_COMMAND = 1
     # TIME_MIN_SINCE_LAST_COMMAND = 0.3
     time_since_last_servo_command_sent = time.time()
     error_integral = 0.0
+    remembered_chosen_center_pix_pos = None  # so we keep going towards that direction if human is really fast
 
     ret, frame = cam.read()
     h, w = frame.shape[:2]
@@ -50,6 +52,7 @@ def camera():
             boxes, score = det[:4], det[4]
             cv2.rectangle(frame, (int(boxes[0]), int(boxes[1])), (int(boxes[2]), int(boxes[3])), (2, 255, 0), 1)
             chosen_center_pix_pos = (int(round((boxes[2] + boxes[0]) / 2)), int(round((boxes[3] + boxes[1]) / 2)))
+            remembered_chosen_center_pix_pos = chosen_center_pix_pos   # TODO do I need to remember the angle?
             cv2.circle(frame, (int(boxes[0]), int(boxes[1])), 10, (0, 255, 255))
             cv2.circle(frame, (int(boxes[2]), int(boxes[3])), 10, (255, 255, 255))
 
@@ -59,6 +62,9 @@ def camera():
 
         # if 5 == 4:
         if chosen_center_pix_pos:
+        # if chosen_center_pix_pos or remembered_chosen_center_pix_pos:
+            # if chosen_center_pix_pos is None and remembered_chosen_center_pix_pos:
+            #     chosen_center_pix_pos = remembered_chosen_center_pix_pos  # TODO sometimes works, sometimes does not
             cv2.circle(frame, chosen_center_pix_pos, 10, (0, 0, 255))
 
             horizontal_distance_to_center_x_bbox = im_half_width - chosen_center_pix_pos[0]
@@ -89,7 +95,13 @@ def camera():
 
                 # P_const = 0.28125
                 # P_const = 0.15
-                P_const = 0.03
+                P_const = 0.03  # very good
+                P_const = 0.01  # gets to ~2 horizontal distance
+                # TODO crazy idea of big P if horizontal distance over 100
+                if horizontal_distance_to_center_x_bbox > 50:
+                    P_const = 0.15
+                else:
+                    P_const = 0.01
                 # I_const = 0.01
                 I_const = 0.0001
                 error = horizontal_distance_to_center_x_bbox  # is this the error? TODO. I always struggled with PID units being different e.g. temperature vs temperature. Speed vs position.
@@ -97,7 +109,8 @@ def camera():
                 # TODO understand I better
                 
                 # amount_to_rotate_by = horizontal_distance_to_center_x_bbox * P_const  # just P
-                amount_to_rotate_by = P_const * error + I_const * error_integral
+                amount_to_rotate_by = P_const * error
+                # amount_to_rotate_by = P_const * error + I_const * error_integral
                 curr_servo_val += amount_to_rotate_by
                 print('horizontal distance: {}. error_integral * I const: {:.3f}. amount_to_rotate_by: {:.3f}. Flask angle: {:.3f}'.format(
                     horizontal_distance_to_center_x_bbox, I_const * error_integral, amount_to_rotate_by, curr_servo_val))
@@ -126,6 +139,7 @@ def camera():
 
 # TODO python matplotlib plots at the same time?
 # TODO full 360 degrees. TODO encoders and DC motors? or brushless or? or two servos on same axis to cover all 360 degrees? that's worth a video by itself, hmmm
+# TODO servo is only moving when i tell it to move 3 degrees?!??! get better servo or do what I said above
 # TODO higher FPS everything, also network throttle time, calculate camera FPS of face and compare that to servo speed
 # TODO tilt
 # TODO mechanical structure without books
