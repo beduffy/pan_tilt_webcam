@@ -1,4 +1,5 @@
 import requests
+import grequests
 import json
 
 
@@ -17,8 +18,10 @@ def post_servo_value(servo_value):
 
     # print(url)
     # x = requests.post(url, json = myobj, headers={"Content-Type": "application/json"})
-    x = requests.post(url, data = json.dumps(myobj), headers={"Content-Type": "application/json"})
-    print('Sent {} angle to flask'.format(servo_value))
+    # x = requests.post(url, data = json.dumps(myobj), headers={"Content-Type": "application/json"})
+    rs = (grequests.post(url, data = json.dumps(myobj), headers={"Content-Type": "application/json"}), )
+    grequests.map(rs)
+    # print('Sent {:.3f} angle to flask'.format(servo_value))
     # print(x.text)
 
 if __name__ == '__main__':
