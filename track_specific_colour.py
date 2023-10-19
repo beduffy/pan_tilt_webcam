@@ -61,14 +61,14 @@ while True:
         # import pdb;pdb.set_trace()
         # print(myMask.sum())
 
+        # TODO below into function of choosing center
         non_zero_y, non_zero_x = myMask.nonzero()
         y_mean = int(round(non_zero_y.mean()))
         x_mean = int(round(non_zero_x.mean()))
 
-        # cv2.circle(frame, (y_mean, x_mean), 10, (0, 0, 255, 3))
-        cv2.circle(frame, (x_mean, y_mean), 10, (0, 0, 255, 3))
+        cv2.circle(frame, (x_mean, y_mean), 10, (0, 0, 255, 3))  # TODO one extra bracket?
 
-
+        # TODO below into function so i can compare HSV tracking to person to face
         horizontal_distance_to_center_x_bbox = im_half_width - x_mean
         print('distance: ', horizontal_distance_to_center_x_bbox)
 

@@ -9,7 +9,8 @@ print(sys.argv)
 
 def post_servo_value(servo_value):
     # curl 192.168.178.125:8080/control_servo -H "Content-Type: application/json" -d '{"servo_value": "0"}'
-    IP = '192.168.178.125'
+    # IP = '192.168.178.125'
+    IP = '192.168.178.36'
 
     url = 'http://{}:8080/control_servo'.format(IP)
     myobj = {'servo_value': '{}'.format(servo_value)}
