@@ -16,8 +16,11 @@ def control_servo():
     print(data)
     servo_value = data["servo_value"]
     print(servo_value)
-    myKit.servo[0].angle=int(servo_value)
+    # myKit.servo[0].angle=int(servo_value)
+    myKit.servo[0].angle=float(servo_value)
     return "servo controlled"
 
 #app.run(port=8080)
 app.run(port=8080, host="0.0.0.0")
+
+# TODO put it on the nano and then update nicely. and/Or use vscode on nano

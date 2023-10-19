@@ -30,8 +30,8 @@ def camera():
     # servo_control_frame_rate = 10
 
     TIME_MIN_SINCE_LAST_COMMAND = 0.1
-    TIME_MIN_SINCE_LAST_COMMAND = 1
-    TIME_MIN_SINCE_LAST_COMMAND = 0.3
+    # TIME_MIN_SINCE_LAST_COMMAND = 1
+    # TIME_MIN_SINCE_LAST_COMMAND = 0.3
     time_since_last_servo_command_sent = time.time()
 
     ret, frame = cam.read()
@@ -50,7 +50,6 @@ def camera():
             chosen_center_pix_pos = (int(round((boxes[2] + boxes[0]) / 2)), int(round((boxes[3] + boxes[1]) / 2)))
             cv2.circle(frame, (int(boxes[0]), int(boxes[1])), 10, (0, 255, 255))
             cv2.circle(frame, (int(boxes[2]), int(boxes[3])), 10, (255, 255, 255))
-            # import pdb;pdb.set_trace()
 
         for lm in lms:
             for i in range(0, 5):
@@ -86,7 +85,8 @@ def camera():
                 # if 10 pixels away: 0.281125 x 10 = 2.8 degrees...
 
                 # P_const = 0.28125
-                P_const = 0.15
+                # P_const = 0.15
+                P_const = 0.03
                 amount_to_rotate_by = horizontal_distance_to_center_x_bbox * P_const
                 curr_servo_val += amount_to_rotate_by
                 print('horizontal distance: ', horizontal_distance_to_center_x_bbox)
@@ -108,6 +108,12 @@ def camera():
 
     cam.release()
 
+# TODO python matplotlib plots at the same time?
+# TODO full 360 degrees. TODO encoders and DC motors? or brushless or? or two servos on same axis to cover all 360 degrees? that's worth a video by itself, hmmm
+# TODO higher FPS everything, also network throttle time, calculate camera FPS of face and compare that to servo speed
+# TODO tilt
+# TODO mechanical structure without books
+# TODO if person leaves camera, then do a sentry look around AND/OR keep going that direction
 
 if __name__ == '__main__':
     camera()
