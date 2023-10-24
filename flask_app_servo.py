@@ -8,16 +8,16 @@ app = Flask(__name__)
 
 @app.route("/")
 def hello_world():
-    return "Hello, Irene/n"
+    return "Hello/n"
 
 @app.route("/control_servo", methods=["POST"])
 def control_servo():
     data = request.get_json()
-    print(data)
+    print('incoming data:', data)
     servo_value = data["servo_value"]
-    print(servo_value)
-    # myKit.servo[0].angle=int(servo_value)
-    myKit.servo[0].angle=float(servo_value)
+    servo_index = int(data.get('servo_index', 0))
+    print('servo_value: ', servo_value, ' servo_index', servo_index)
+    myKit.servo[servo_index].angle=float(servo_value)
     return "servo controlled"
 
 #app.run(port=8080)
