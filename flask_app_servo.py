@@ -17,7 +17,7 @@ def control_servo():
     servo_value = data["servo_value"]
     servo_index = int(data.get('servo_index', 0))
     print('servo_value: ', servo_value, ' servo_index', servo_index)
-    myKit.servo[servo_index].angle=float(servo_value)
+    myKit.servo[servo_index].angle = float(servo_value)
     return "servo controlled"
 
 #app.run(port=8080)

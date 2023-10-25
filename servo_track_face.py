@@ -55,6 +55,18 @@ class PID_pixels_to_servo_angles():
         return amount_to_rotate_by
 
 
+def rotate_servo_towards_target(curr_servo_val, pixel_dist_to_target):
+    amount_to_rotate_by = 0.1  # instead of PID, stupid but works
+    if pixel_dist_to_target > 0:
+        print('distance positive, object')
+        curr_servo_val += amount_to_rotate_by
+    else:
+        print('distance negative, object')
+        curr_servo_val -= amount_to_rotate_by
+
+    return curr_servo_val
+
+
 
 def camera():
     # TODO below camera stuff into function
@@ -67,8 +79,10 @@ def camera():
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
-    curr_servo_val = 90
-    post_servo_value(curr_servo_val)
+    curr_pan_servo_val = 90
+    curr_tilt_servo_val = 90
+    post_servo_value(curr_pan_servo_val, 0)
+    post_servo_value(curr_tilt_servo_val, 1)
     # TODO soon or not?
     # servo_control_frame_rate = 10
 
@@ -116,6 +130,7 @@ def camera():
 
             horizontal_distance_to_center_x_bbox = img_half_width - chosen_center_pix_pos[0]
             vertical_distance_to_center_y_bbox = img_half_height - chosen_center_pix_pos[1]  # TODO flip or?
+            # vertical_distance_to_center_y_bbox = chosen_center_pix_pos[1] - img_half_height  # TODO flip or?
 
             cv2.line(frame, (chosen_center_pix_pos[0], chosen_center_pix_pos[1]), 
                      (img_half_width, chosen_center_pix_pos[1]), (0, 255, 0), thickness=2)
@@ -125,29 +140,35 @@ def camera():
             if time.time() - time_since_last_servo_command_sent > TIME_MIN_SINCE_LAST_COMMAND:
                 time_since_last_servo_command_sent = time.time()
                 
-                # amount_to_rotate_by = 0.1  # instead of PID, stupid but works
-                # if horizontal_distance_to_center_x_bbox > 0:
-                #     print('distance positive, object to left')
-                #     curr_servo_val += amount_to_rotate_by
-                # else:
-                #     print('distance negative, object pospost_servo_value(curr_servo_val)t_servo_value(curr_servo_val)to right')
-                #     curr_servo_val -= amount_to_rotate_by
+                # curr_pan_servo_val = rotate_servo_towards_target(curr_pan_servo_val, horizontal_distance_to_center_x_bbox)
+                # curr_tilt_servo_val = rotate_servo_towards_target(curr_tilt_servo_val, vertical_distance_to_center_y_bbox)
 
                 amount_to_rotate_by = pid_horizontal.get_amount_to_rotate_by(horizontal_distance_to_center_x_bbox)
+                curr_pan_servo_val += amount_to_rotate_by
+                amount_to_rotate_by = pid_vertical.get_amount_to_rotate_by(vertical_distance_to_center_y_bbox)
+                curr_tilt_servo_val += amount_to_rotate_by
 
-                curr_servo_val += amount_to_rotate_by
+                # TODO abstract the below to classes/functions
+                if curr_pan_servo_val < 0:
+                    curr_pan_servo_val = 0
+                elif curr_pan_servo_val > 180:
+                    curr_pan_servo_val = 180
+                post_servo_value(curr_pan_servo_val, 0)
+
+                if curr_tilt_servo_val < 0:
+                    curr_tilt_servo_val = 0
+                elif curr_tilt_servo_val > 180:
+                    curr_tilt_servo_val = 180
+                post_servo_value(curr_tilt_servo_val, 1)
+
                 print('horizontal dist: {}. vert dist: {}. error_integral * I const: {:.3f}. amount_to_rotate_by: {:.3f}. Flask angle: {:.3f}'.format(
                     horizontal_distance_to_center_x_bbox, vertical_distance_to_center_y_bbox, 
-                    pid_horizontal.I_const * pid_horizontal.error_integral, amount_to_rotate_by, curr_servo_val))
+                    pid_vertical.I_const * pid_vertical.error_integral, amount_to_rotate_by, curr_tilt_servo_val))
 
-                if curr_servo_val < 0:
-                    curr_servo_val = 0
-                elif curr_servo_val > 180:
-                    curr_servo_val = 180
-
-
-                post_servo_value(curr_servo_val)  
-
+                # print('horizontal dist: {}. vert dist: {}. error_integral * I const: {:.3f}. amount_to_rotate_by: {:.3f}. Flask angle: {:.3f}'.format(
+                #     horizontal_distance_to_center_x_bbox, vertical_distance_to_center_y_bbox, 
+                #     pid_horizontal.I_const * pid_horizontal.error_integral, amount_to_rotate_by, curr_pan_servo_val))
+                
         cv2.imshow('out', frame)
 
         # Press Q on keyboard to stop recording
