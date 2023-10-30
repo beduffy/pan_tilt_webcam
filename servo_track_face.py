@@ -10,7 +10,7 @@ from person_detection_from_cctv_video.send_servo_val_requests import post_servo_
 
 
 class PID_pixels_to_servo_angles():
-    def __init__(self, error_integral_rate) -> None:
+    def __init__(self, error_integral_rate, use_changing_PID=False) -> None:
          
         # this PID converts from horizontal pixel distances to degree rotates to add to servo val
         # Therefore the max is 640 pixels -> 180 degrees
@@ -35,10 +35,15 @@ class PID_pixels_to_servo_angles():
         self.error_integral = 0.0
         self.error_integral_rate = error_integral_rate
 
+        self.use_changing_PID = use_changing_PID
+
     def get_amount_to_rotate_by(self, pixel_dist):
-        # TODO crazy idea of big P if horizontal distance over 100
-        if pixel_dist > 50:
-            P_const = 0.15
+        # TODO crazy idea if statement below of big P if horizontal distance over 100
+        if self.use_changing_PID:
+            if pixel_dist > 50:
+                P_const = 0.15
+            else:
+                P_const = 0.01
         else:
             P_const = 0.01
         
@@ -79,21 +84,18 @@ def camera():
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
+    TIME_MIN_SINCE_LAST_COMMAND = 0.1
+    # TIME_MIN_SINCE_LAST_COMMAND = 0.05
+    # TIME_MIN_SINCE_LAST_COMMAND = 1
+    # TIME_MIN_SINCE_LAST_COMMAND = 0.3
+    time_since_last_servo_command_sent = time.time()
     curr_pan_servo_val = 90
     curr_tilt_servo_val = 90
     post_servo_value(curr_pan_servo_val, 0)
     post_servo_value(curr_tilt_servo_val, 1)
     # TODO soon or not?
     # servo_control_frame_rate = 10
-
-    TIME_MIN_SINCE_LAST_COMMAND = 0.1
-    # TIME_MIN_SINCE_LAST_COMMAND = 0.05
-    # TIME_MIN_SINCE_LAST_COMMAND = 1
-    # TIME_MIN_SINCE_LAST_COMMAND = 0.3
-    time_since_last_servo_command_sent = time.time()
-    
-
-    pid_horizontal = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND)
+    pid_horizontal = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND, use_changing_PID=True)
     pid_vertical = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND)
 
     remembered_chosen_center_pix_pos = None  # so we keep going towards that direction if human is really fast. hmm flaws 
@@ -190,7 +192,10 @@ def camera():
 # TODO tilt
 # TODO mechanical structure without books
 # TODO if person leaves camera, then do a sentry look around AND/OR keep going that direction
-
+# TODO can centre face or other face detection run on jetson nano?
+# TODO try this: https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/ObjectDetection-Motor%20Tracker
+# and this: https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/Motion%20Detection%20Surveillance
+# https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/AI%20Face%20Tracking%20Robot
 
 if __name__ == '__main__':
     camera()
