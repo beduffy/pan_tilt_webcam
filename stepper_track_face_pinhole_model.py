@@ -33,7 +33,9 @@ def camera():
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
-    full_horizontal_fov = 78.0
+    # full_horizontal_fov = 78.0
+    # https://stackoverflow.com/questions/25088543/estimate-visible-bounds-of-webcam-using-diagonal-fov
+    full_horizontal_fov = 70.428
     half_horizontal_fov = full_horizontal_fov / 2
 
    
@@ -42,16 +44,18 @@ def camera():
     centerface = CenterFace()
 
     # motor control
-    ser = serial.Serial('/dev/ttyACM0', 9600, timeout = 1)
+    # ser = serial.Serial('/dev/ttyACM0', 9600, timeout = 1)
+    ser = serial.Serial('/dev/ttyACM0', 115200, timeout = 1)
     TIME_MIN_SINCE_LAST_COMMAND = 0.1
     # TIME_MIN_SINCE_LAST_COMMAND = 0.01
-    # TIME_MIN_SINCE_LAST_COMMAND = 1
-    # TIME_MIN_SINCE_LAST_COMMAND = 0.3
+    # TIME_MIN_SINCE_LAST_COMMAND = 5
+    TIME_MIN_SINCE_LAST_COMMAND = 0.3
+    # TIME_MIN_SINCE_LAST_COMMAND = 0.5
     # TODO for steppers im taking 300 milisecond to step there?
     time_since_last_servo_command_sent = time.time()
     curr_pan_servo_val = 0
     # curr_tilt_servo_val = 90
-    send_angle_to_stepper_serial(ser, 90)
+    send_angle_to_stepper_serial(ser, curr_pan_servo_val)
     # post_servo_value(curr_pan_servo_val, 0)
     # post_servo_value(curr_tilt_servo_val, 1)
 
@@ -83,7 +87,8 @@ def camera():
             normalised_horizontal_dist = horizontal_distance_to_center_x_bbox / img_half_width
             relative_angle_to_center_from_fov = normalised_horizontal_dist * half_horizontal_fov
 
-            curr_pan_servo_val = relative_angle_to_center_from_fov
+            # curr_pan_servo_val = relative_angle_to_center_from_fov
+            curr_pan_servo_val = relative_angle_to_center_from_fov * 4
             
             cv2.putText(frame, "Normalised hori dist: {:.3f}".format(normalised_horizontal_dist), (10, 30), 0, 0.7, (255, 0, 0))
             cv2.putText(frame, "relative_angle_to_center: {:.3f}".format(relative_angle_to_center_from_fov), (10, 60), 0, 0.7, (255, 0, 0))
@@ -110,6 +115,7 @@ def camera():
             break
 
         # Reporting FPS, varies even without servo control, between 16-21
+        # FPS is not the bottleneck yet. Controlling stepper fast enough is? Or serial connection?
         # time_taken = time.time() - start_loop_time
         # print('Time taken: {:.3f}. FPS: {:.3f}'.format(time_taken, 1 / time_taken))
 
@@ -130,6 +136,8 @@ def camera():
 # https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/AI%20Face%20Tracking%20Robot
 # TODO does this make the webcam faster? https://gist.github.com/gaborvecsei/c7e91d6027597a0b8b05b233198cfe5d
 # TODO how to do 60 FPS on webcam? https://forum.opencv.org/t/problem-with-webcam-c922-to-configure-60-fps-720p/9366/5 
+# TODO need world model of person's velocity and where they were and stuff. Use realsense or not? Maybe depth camera would be better anyway? yes
+#  
 
 if __name__ == '__main__':
     camera()
