@@ -226,6 +226,8 @@ def camera():
 # TODO try this: https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/ObjectDetection-Motor%20Tracker
 # and this: https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/Motion%20Detection%20Surveillance
 # https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/AI%20Face%20Tracking%20Robot
+# TODO does this make the webcam faster? https://gist.github.com/gaborvecsei/c7e91d6027597a0b8b05b233198cfe5d
+# TODO how to do 60 FPS on webcam? https://forum.opencv.org/t/problem-with-webcam-c922-to-configure-60-fps-720p/9366/5 
 
 if __name__ == '__main__':
     camera()
