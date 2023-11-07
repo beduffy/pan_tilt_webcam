@@ -13,6 +13,14 @@ from person_detection_from_cctv_video.send_servo_val_requests import post_servo_
 def send_angle_to_stepper_serial(ser, angle):
     cmd = '{}\n'.format(angle)
 
+    res = ser.write(cmd.encode())
+    ser.flush()
+    print('Sent: ', cmd)
+
+    r = ser.readline()
+    # print('Got serial line: ', r)
+
+
 
 class PID_pixels_to_servo_angles():
     def __init__(self, error_integral_rate, use_changing_PID=False) -> None:
@@ -29,10 +37,13 @@ class PID_pixels_to_servo_angles():
         # TODO easily swap from PID to just left right
         # TODO easily swap from face track to colour track to person track?
         
+        # TODO why is stepper different? 
+
         # self.P_const = 0.28125
         # self.P_const = 0.15
-        self.P_const = 0.03  # very good
-        self.P_const = 0.01  # gets to ~2 horizontal distance
+        self.P_const = 0.1
+        # self.P_const = 0.03  # very good for servo and stepper
+        # self.P_const = 0.01  # gets to ~2 horizontal distance
 
         # self.I_const = 0.01
         self.I_const = 0.0001
@@ -46,19 +57,19 @@ class PID_pixels_to_servo_angles():
         # TODO crazy idea if statement below of big P if horizontal distance over 100
         if self.use_changing_PID:
             if pixel_dist > 50:
-                P_const = 0.15
+                self.P_const = 0.15
             else:
-                P_const = 0.01
-        else:
-            P_const = 0.01
+                self.P_const = 0.01
+        # else:
+            # P_const = 0.01
         
         self.error = pixel_dist  # is this the error? TODO. I always struggled with PID units being different e.g. temperature vs temperature. Speed vs position.
         self.error_integral += self.error * (self.error_integral_rate)  # TODO it might not be TIME_MIN_SINCE_LAST_COMMAND
         # TODO understand I better
         
         # amount_to_rotate_by = horizontal_distance_to_center_x_bbox * P_const  # just P
-        amount_to_rotate_by = P_const * self.error
-        # amount_to_rotate_by = P_const * error + I_const * error_integral
+        amount_to_rotate_by = self.P_const * self.error
+        # amount_to_rotate_by = self.P_const * error + I_const * error_integral
         # print('error_integral:', error_integral)
         # print('amount_to_rotate_by:', amount_to_rotate_by)
 
@@ -98,18 +109,20 @@ def camera():
     # motor control
     ser = serial.Serial('/dev/ttyACM0', 9600, timeout = 1)
     TIME_MIN_SINCE_LAST_COMMAND = 0.1
-    # TIME_MIN_SINCE_LAST_COMMAND = 0.05
-    TIME_MIN_SINCE_LAST_COMMAND = 1
+    # TIME_MIN_SINCE_LAST_COMMAND = 0.01
+    # TIME_MIN_SINCE_LAST_COMMAND = 1
     # TIME_MIN_SINCE_LAST_COMMAND = 0.3
+    # TODO for steppers im taking 300 milisecond to step there?
     time_since_last_servo_command_sent = time.time()
-    curr_pan_servo_val = 90
+    curr_pan_servo_val = 0
     # curr_tilt_servo_val = 90
     send_angle_to_stepper_serial(ser, 90)
     # post_servo_value(curr_pan_servo_val, 0)
     # post_servo_value(curr_tilt_servo_val, 1)
     # TODO soon or not?
     # servo_control_frame_rate = 10
-    pid_horizontal = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND, use_changing_PID=True)
+    pid_horizontal = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND)
+    # pid_horizontal = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND, use_changing_PID=True)
     # pid_vertical = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND)
 
     while True:
@@ -138,7 +151,8 @@ def camera():
             #     chosen_center_pix_pos = remembered_chosen_center_pix_pos  # TODO sometimes works, sometimes does not
             cv2.circle(frame, chosen_center_pix_pos, 10, (0, 0, 255))
 
-            horizontal_distance_to_center_x_bbox = img_half_width - chosen_center_pix_pos[0]
+            # horizontal_distance_to_center_x_bbox = img_half_width - chosen_center_pix_pos[0]
+            horizontal_distance_to_center_x_bbox =  chosen_center_pix_pos[0] - img_half_width
             vertical_distance_to_center_y_bbox = img_half_height - chosen_center_pix_pos[1]  # TODO flip or?
             # vertical_distance_to_center_y_bbox = chosen_center_pix_pos[1] - img_half_height  # TODO flip or?
 
@@ -179,8 +193,12 @@ def camera():
                 #     horizontal_distance_to_center_x_bbox, vertical_distance_to_center_y_bbox, 
                 #     pid_vertical.I_const * pid_vertical.error_integral, amount_to_rotate_by, curr_tilt_servo_val))
 
-                print('horizontal dist: {}. vert dist: {}. error_integral * I const: {:.3f}. amount_to_rotate_by: {:.3f}. Flask angle: {:.3f}'.format(
-                    horizontal_distance_to_center_x_bbox, vertical_distance_to_center_y_bbox, 
+                # print('horizontal dist: {}. vert dist: {}. error_integral * I const: {:.3f}. amount_to_rotate_by: {:.3f}. Flask angle: {:.3f}'.format(
+                #     horizontal_distance_to_center_x_bbox, vertical_distance_to_center_y_bbox, 
+                #     pid_horizontal.I_const * pid_horizontal.error_integral, amount_to_rotate_by, curr_pan_servo_val))
+                
+                print('horizontal dist: {}. error: {:.3f}. error_integral * I const: {:.3f}. amount_to_rotate_by: {:.3f}. Flask angle: {:.3f}'.format(
+                    horizontal_distance_to_center_x_bbox, pid_horizontal.error, 
                     pid_horizontal.I_const * pid_horizontal.error_integral, amount_to_rotate_by, curr_pan_servo_val))
                 
         cv2.imshow('out', frame)
