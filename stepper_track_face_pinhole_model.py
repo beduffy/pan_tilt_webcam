@@ -18,7 +18,7 @@ def send_angle_to_stepper_serial(ser, angle):
     print('Sent: ', cmd)
 
     r = ser.readline()
-    # print('Got serial line: ', r)
+    print('Got serial line: ', r)
 
 
 def camera():
@@ -45,7 +45,7 @@ def camera():
 
     # motor control
     # ser = serial.Serial('/dev/ttyACM0', 9600, timeout = 1)
-    ser = serial.Serial('/dev/ttyACM0', 115200, timeout = 1)
+    ser = serial.Serial('/dev/ttyACM0', 115200, timeout = 0.2)
     TIME_MIN_SINCE_LAST_COMMAND = 0.1
     # TIME_MIN_SINCE_LAST_COMMAND = 0.01
     # TIME_MIN_SINCE_LAST_COMMAND = 5
@@ -88,7 +88,9 @@ def camera():
             relative_angle_to_center_from_fov = normalised_horizontal_dist * half_horizontal_fov
 
             # curr_pan_servo_val = relative_angle_to_center_from_fov
-            curr_pan_servo_val = relative_angle_to_center_from_fov * 4
+            # curr_pan_servo_val = relative_angle_to_center_from_fov * 4
+            # curr_pan_servo_val = relative_angle_to_center_from_fov * 6  ## 8 was a bit of oscillation, this is a tiny bit but faster?
+            curr_pan_servo_val = relative_angle_to_center_from_fov * 5  ## 8 was a bit of oscillation, this is a tiny bit but faster?
             
             cv2.putText(frame, "Normalised hori dist: {:.3f}".format(normalised_horizontal_dist), (10, 30), 0, 0.7, (255, 0, 0))
             cv2.putText(frame, "relative_angle_to_center: {:.3f}".format(relative_angle_to_center_from_fov), (10, 60), 0, 0.7, (255, 0, 0))
@@ -137,7 +139,7 @@ def camera():
 # TODO does this make the webcam faster? https://gist.github.com/gaborvecsei/c7e91d6027597a0b8b05b233198cfe5d
 # TODO how to do 60 FPS on webcam? https://forum.opencv.org/t/problem-with-webcam-c922-to-configure-60-fps-720p/9366/5 
 # TODO need world model of person's velocity and where they were and stuff. Use realsense or not? Maybe depth camera would be better anyway? yes
-#  
+#  TODO serial or accel stepper library is slow? maybe not, is it threads or pyserial or?
 
 if __name__ == '__main__':
     camera()
