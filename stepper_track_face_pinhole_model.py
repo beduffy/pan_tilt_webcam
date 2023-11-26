@@ -62,9 +62,9 @@ def camera():
     TIME_MIN_SINCE_LAST_COMMAND = 0.3
     # TODO for steppers im taking 300 milisecond to step there?
     time_since_last_servo_command_sent = time.time()
-    curr_pan_stepper_val = 90
+    # curr_pan_stepper_val = 90
     curr_tilt_servo_val = 100
-    send_angle_to_stepper_serial(ser, curr_pan_stepper_val)
+    # send_angle_to_stepper_serial(ser, curr_pan_stepper_val)
     # post_servo_value(curr_pan_stepper_val, 0)
     # post_servo_value(curr_tilt_servo_val, 1)
     send_angle_to_servo_serial(ser, curr_tilt_servo_val)
