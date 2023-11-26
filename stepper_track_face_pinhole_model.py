@@ -8,10 +8,22 @@ import scipy.io as sio
 
 from centerface import CenterFace
 from person_detection_from_cctv_video.send_servo_val_requests import post_servo_value
+from servo_track_face import PID_pixels_to_servo_angles
 
 
 def send_angle_to_stepper_serial(ser, angle):
-    cmd = '{}\n'.format(angle)
+    cmd = 'a{}\n'.format(angle)
+
+    res = ser.write(cmd.encode())
+    ser.flush()
+    print('Sent: ', cmd)
+
+    r = ser.readline()
+    print('Got serial line: ', r)
+
+
+def send_angle_to_servo_serial(ser, angle):
+    cmd = 'b{}\n'.format(angle)
 
     res = ser.write(cmd.encode())
     ser.flush()
@@ -47,17 +59,17 @@ def camera():
     # ser = serial.Serial('/dev/ttyACM0', 9600, timeout = 1)
     ser = serial.Serial('/dev/ttyACM0', 115200, timeout = 0.2)
     TIME_MIN_SINCE_LAST_COMMAND = 0.1
-    # TIME_MIN_SINCE_LAST_COMMAND = 0.01
-    # TIME_MIN_SINCE_LAST_COMMAND = 5
     TIME_MIN_SINCE_LAST_COMMAND = 0.3
-    # TIME_MIN_SINCE_LAST_COMMAND = 0.5
     # TODO for steppers im taking 300 milisecond to step there?
     time_since_last_servo_command_sent = time.time()
-    curr_pan_servo_val = 0
-    # curr_tilt_servo_val = 90
-    send_angle_to_stepper_serial(ser, curr_pan_servo_val)
-    # post_servo_value(curr_pan_servo_val, 0)
+    curr_pan_stepper_val = 90
+    curr_tilt_servo_val = 100
+    send_angle_to_stepper_serial(ser, curr_pan_stepper_val)
+    # post_servo_value(curr_pan_stepper_val, 0)
     # post_servo_value(curr_tilt_servo_val, 1)
+    send_angle_to_servo_serial(ser, curr_tilt_servo_val)
+
+    pid_vertical = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND)
 
     while True:
         start_loop_time = time.time()
@@ -81,16 +93,20 @@ def camera():
         if chosen_center_pix_pos:
             cv2.circle(frame, chosen_center_pix_pos, 10, (0, 0, 255))
 
-            horizontal_distance_to_center_x_bbox =  chosen_center_pix_pos[0] - img_half_width
-            vertical_distance_to_center_y_bbox = img_half_height - chosen_center_pix_pos[1]  # TODO flip or?
+            # horizontal_distance_to_center_x_bbox =  chosen_center_pix_pos[0] - img_half_width
+            horizontal_distance_to_center_x_bbox =  img_half_width - chosen_center_pix_pos[0]
+            # vertical_distance_to_center_y_bbox = img_half_height - chosen_center_pix_pos[1]  # TODO flip or?
+            vertical_distance_to_center_y_bbox = chosen_center_pix_pos[1] - img_half_height 
 
             normalised_horizontal_dist = horizontal_distance_to_center_x_bbox / img_half_width
             relative_angle_to_center_from_fov = normalised_horizontal_dist * half_horizontal_fov
 
-            # curr_pan_servo_val = relative_angle_to_center_from_fov
-            # curr_pan_servo_val = relative_angle_to_center_from_fov * 4
-            # curr_pan_servo_val = relative_angle_to_center_from_fov * 6  ## 8 was a bit of oscillation, this is a tiny bit but faster?
-            curr_pan_servo_val = relative_angle_to_center_from_fov * 5  ## 8 was a bit of oscillation, this is a tiny bit but faster?
+            curr_pan_stepper_val = relative_angle_to_center_from_fov
+
+            # I think the below was only the case because in arduino I had not specified (1, 2, 5) pins...
+            # curr_pan_stepper_val = relative_angle_to_center_from_fov * 4
+            # curr_pan_stepper_val = relative_angle_to_center_from_fov * 6  ## 8 was a bit of oscillation, this is a tiny bit but faster?
+            # curr_pan_stepper_val = relative_angle_to_center_from_fov * 5  ## 8 was a bit of oscillation, this is a tiny bit but faster?
             
             cv2.putText(frame, "Normalised hori dist: {:.3f}".format(normalised_horizontal_dist), (10, 30), 0, 0.7, (255, 0, 0))
             cv2.putText(frame, "relative_angle_to_center: {:.3f}".format(relative_angle_to_center_from_fov), (10, 60), 0, 0.7, (255, 0, 0))
@@ -99,16 +115,22 @@ def camera():
                      (img_half_width, chosen_center_pix_pos[1]), (0, 255, 0), thickness=2)
             cv2.line(frame, (chosen_center_pix_pos[0], chosen_center_pix_pos[1]), 
                      (chosen_center_pix_pos[0], img_half_height), (255, 255, 0), thickness=2)
+            
+            # servo tilt control
+            amount_to_rotate_by = pid_vertical.get_amount_to_rotate_by(vertical_distance_to_center_y_bbox)
+            curr_tilt_servo_val += amount_to_rotate_by
 
             if time.time() - time_since_last_servo_command_sent > TIME_MIN_SINCE_LAST_COMMAND:
                 time_since_last_servo_command_sent = time.time()
 
                 # TODO modulus
-                send_angle_to_stepper_serial(ser, curr_pan_servo_val)
+                send_angle_to_stepper_serial(ser, curr_pan_stepper_val)
+
+                send_angle_to_servo_serial(ser, curr_tilt_servo_val)
 
                 # print('horizontal dist: {}. error: {:.3f}. error_integral * I const: {:.3f}. amount_to_rotate_by: {:.3f}. Flask angle: {:.3f}'.format(
                 #     horizontal_distance_to_center_x_bbox, pid_horizontal.error, 
-                #     pid_horizontal.I_const * pid_horizontal.error_integral, amount_to_rotate_by, curr_pan_servo_val))
+                #     pid_horizontal.I_const * pid_horizontal.error_integral, amount_to_rotate_by, curr_pan_stepper_val))
                 
         cv2.imshow('out', frame)
 
