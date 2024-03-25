@@ -21,7 +21,9 @@ class FaceTracker(Node):
         self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.centerface = CenterFace()
-        self.pid_horizontal = PIDController(kp=0.001, ki=0.0001, kd=0.0001)
+        self.pid_horizontal_far = PIDController(kp=0.005, ki=0.000, kd=0.0001)
+        self.pid_horizontal_near = PIDController(kp=0.0003, ki=0.000, kd=0.000001)
+        self.near_threshold = 50
 
     def track_face(self):
         ret, frame = self.cam.read()
@@ -53,8 +55,13 @@ class FaceTracker(Node):
             cv2.line(frame, (chosen_center_pix_pos[0], chosen_center_pix_pos[1]), 
                         (self.img_half_width, chosen_center_pix_pos[1]), (0, 255, 0), thickness=2)
 
-            horizontal_distance_to_center_x_bbox = self.img_half_width - chosen_center_pix_pos[0]
-            amount_to_rotate_by = self.pid_horizontal.update(horizontal_distance_to_center_x_bbox)
+            # Switch PID parameters based on distance
+            if abs(horizontal_distance_to_center_x_bbox) < self.near_threshold:
+                pid_controller = self.pid_horizontal_near
+            else:
+                pid_controller = self.pid_horizontal_far
+            
+            amount_to_rotate_by = pid_controller.update(horizontal_distance_to_center_x_bbox)
             self.send_twist_command(amount_to_rotate_by)
             # Only track the first face detected for simplicity
         else:
@@ -76,16 +83,18 @@ class FaceTracker(Node):
 
 
 class PIDController():
-    def __init__(self, kp, ki, kd, set_point=0.0) -> None:
+    def __init__(self, kp, ki, kd) -> None:
         self.kp = kp
         self.ki = ki
         self.kd = kd
-        self.set_point = set_point
         self.error_integral = 0.0
         self.last_error = 0.0
         self.error_derivative = 0.0
 
     def update(self, pixel_horizontal_error):
+
+
+
         self.error_integral += pixel_horizontal_error
         self.error_derivative = pixel_horizontal_error - self.last_error
         self.last_error = pixel_horizontal_error
