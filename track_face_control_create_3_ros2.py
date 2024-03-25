@@ -10,20 +10,7 @@ from person_detection_from_cctv_video.send_servo_val_requests import post_servo_
 
 
 class PID_pixels_to_servo_angles():
-    def __init__(self, error_integral_rate, use_changing_PID=False) -> None:
-         
-        # this PID converts from horizontal pixel distances to degree rotates to add to servo val
-        # Therefore the max is 640 pixels -> 180 degrees
-        # 640 / 180 = 3.5 P
-        # So if 100 pixels away: 3.5 x 100
-        # or 180 / 640 = 0.28125
-        # So if 100 pixels away: 0.28125 x 100 = 28.125 degrees to change... 
-        # TODO could also calculate how many degrees theoretically with a target 3 metres away? hmm, manual tuning
-        # if 10 pixels away: 0.281125 x 10 = 2.8 degrees...
-
-        # TODO easily swap from PID to just left right
-        # TODO easily swap from face track to colour track to person track?
-        
+    def __init__(self, error_integral_rate, use_changing_PID=False) -> None:        
         # self.P_const = 0.28125
         # self.P_const = 0.15
         self.P_const = 0.03  # very good
@@ -60,17 +47,6 @@ class PID_pixels_to_servo_angles():
         return amount_to_rotate_by
 
 
-def rotate_servo_towards_target(curr_servo_val, pixel_dist_to_target):
-    amount_to_rotate_by = 0.1  # instead of PID, stupid but works
-    if pixel_dist_to_target > 0:
-        print('distance positive, object')
-        curr_servo_val += amount_to_rotate_by
-    else:
-        print('distance negative, object')
-        curr_servo_val -= amount_to_rotate_by
-
-    return curr_servo_val
-
 
 
 def camera():
@@ -92,12 +68,12 @@ def camera():
     time_since_last_servo_command_sent = time.time()
     curr_pan_servo_val = 90
     curr_tilt_servo_val = 90
-    post_servo_value(curr_pan_servo_val, 0)
-    post_servo_value(curr_tilt_servo_val, 1)
+    # post_servo_value(curr_pan_servo_val, 0)
+    # post_servo_value(curr_tilt_servo_val, 1)
     # TODO soon or not?
     # servo_control_frame_rate = 10
     pid_horizontal = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND, use_changing_PID=True)
-    pid_vertical = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND)
+    # pid_vertical = PID_pixels_to_servo_angles(TIME_MIN_SINCE_LAST_COMMAND)
 
     remembered_chosen_center_pix_pos = None  # so we keep going towards that direction if human is really fast. hmm flaws 
 
@@ -143,30 +119,34 @@ def camera():
             if time.time() - time_since_last_servo_command_sent > TIME_MIN_SINCE_LAST_COMMAND:
                 time_since_last_servo_command_sent = time.time()
                 
-                # curr_pan_servo_val = rotate_servo_towards_target(curr_pan_servo_val, horizontal_distance_to_center_x_bbox)
-                # curr_tilt_servo_val = rotate_servo_towards_target(curr_tilt_servo_val, vertical_distance_to_center_y_bbox)
-
                 amount_to_rotate_by = pid_horizontal.get_amount_to_rotate_by(horizontal_distance_to_center_x_bbox)
                 curr_pan_servo_val += amount_to_rotate_by
-                amount_to_rotate_by = pid_vertical.get_amount_to_rotate_by(vertical_distance_to_center_y_bbox)
-                curr_tilt_servo_val += amount_to_rotate_by
+                # amount_to_rotate_by = pid_vertical.get_amount_to_rotate_by(vertical_distance_to_center_y_bbox)
+                # curr_tilt_servo_val += amount_to_rotate_by
 
                 # TODO abstract the below to classes/functions
                 if curr_pan_servo_val < 0:
                     curr_pan_servo_val = 0
                 elif curr_pan_servo_val > 180:
                     curr_pan_servo_val = 180
-                post_servo_value(curr_pan_servo_val, 0)
+                # post_servo_value(curr_pan_servo_val, 0)
 
                 if curr_tilt_servo_val < 0:
                     curr_tilt_servo_val = 0
                 elif curr_tilt_servo_val > 180:
                     curr_tilt_servo_val = 180
-                post_servo_value(curr_tilt_servo_val, 1)
+                # post_servo_value(curr_tilt_servo_val, 1)
 
                 print('horizontal dist: {}. vert dist: {}. error_integral * I const: {:.3f}. amount_to_rotate_by: {:.3f}. Flask angle: {:.3f}'.format(
                     horizontal_distance_to_center_x_bbox, vertical_distance_to_center_y_bbox, 
-                    pid_vertical.I_const * pid_vertical.error_integral, amount_to_rotate_by, curr_tilt_servo_val))
+                    amount_to_rotate_by, curr_tilt_servo_val))
+                
+                twist_msg = Twist()
+                twist_msg.linear.x = 0.0
+                twist_msg.angular.z = correction  # Scale down to ensure it's not too high
+
+                print('linear.x:', twist_msg.linear.x, ' angular z:',  correction)
+                self.cmd_vel_publisher_.publish(twist_msg)
 
                 # print('horizontal dist: {}. vert dist: {}. error_integral * I const: {:.3f}. amount_to_rotate_by: {:.3f}. Flask angle: {:.3f}'.format(
                 #     horizontal_distance_to_center_x_bbox, vertical_distance_to_center_y_bbox, 
@@ -184,19 +164,6 @@ def camera():
 
     cam.release()
 
-# TODO swap to grequests? async
-# TODO multi threading between servo control and webcam?
-# TODO python matplotlib plots at the same time?
-# TODO full 360 degrees. TODO encoders and DC motors? or brushless or? or two servos on same axis to cover all 360 degrees? that's worth a video by itself, hmmm
-# TODO servo is only moving when i tell it to move 3 degrees?!??! get better servo or do what I said above
-# TODO higher FPS everything, also network throttle time, calculate camera FPS of face and compare that to servo speed
-# TODO tilt
-# TODO mechanical structure without books
-# TODO if person leaves camera, then do a sentry look around AND/OR keep going that direction
-# TODO can centre face or other face detection run on jetson nano?
-# TODO try this: https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/ObjectDetection-Motor%20Tracker
-# and this: https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/Motion%20Detection%20Surveillance
-# https://github.com/AnbuKumar-maker/AI-on-Jetson-Nano/blob/master/AI%20Face%20Tracking%20Robot
 
 if __name__ == '__main__':
     camera()
